@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils import timezone
 from .models import (
-    UserProfile, Category, Gig, Order, OrderDeliverable, Review, Team, 
+    UserProfile, Category, Subcategory, Gig, Order, OrderDeliverable, Review, Team, 
     Conversation, Message, Portfolio, Withdrawal, HelpRequest, GroupJoinRequest,
     Job, Proposal, Notification, UserVerification, SavedSearch, OnboardingResponse,
     Course, Lesson, Enrollment, SkillAssessment, AssessmentQuestion, 
@@ -287,6 +287,12 @@ class UserProfileAdmin(admin.ModelAdmin):
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'description', 'created_at']
     search_fields = ['name', 'description']
+
+@admin.register(Subcategory)
+class SubcategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'category', 'description', 'created_at']
+    list_filter = ['category', 'created_at']
+    search_fields = ['name', 'description', 'category__name']
 
 @admin.register(Gig)
 class GigAdmin(admin.ModelAdmin):
