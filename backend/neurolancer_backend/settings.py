@@ -166,7 +166,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "https://www.neurolancer.work"
+    "https://www.neurolancer.work",
     "https://neurolancer-9omq.vercel.app",
     "https://neurolancer-5jxf.vercel.app",
     "https://neurolancer-5jxf-git-main-kbrian1237s-projects.vercel.app",
@@ -207,7 +207,7 @@ X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # CSRF settings
 CSRF_TRUSTED_ORIGINS = [
-    "https://www.neurolancer.work"
+    "https://www.neurolancer.work",
     "https://neurolancer-9omq.vercel.app",
     "https://neurolancer-5jxf.vercel.app",
     "https://neurolancer-5jxf-git-main-kbrian1237s-projects.vercel.app",
