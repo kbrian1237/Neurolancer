@@ -363,5 +363,9 @@ urlpatterns = [
     path('assessments/questions/', assessment_views.create_question, name='create-question'),
     path('assessments/question-options/', assessment_views.create_question_option, name='create-question-option'),
     path('assessments/questions/<int:question_id>/', assessment_views.delete_question, name='delete-question'),
+    
+    # Subcategory URLs
+    path('subcategories/', views.get_subcategories_by_category, name='subcategories-by-category'),
+    path('categories/with-subcategories/', views.get_categories_with_subcategories, name='categories-with-subcategories'),
 ]
 

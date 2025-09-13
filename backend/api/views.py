@@ -5505,3 +5505,36 @@ def debug_conversation_messages(request, conversation_id):
         
     except Conversation.DoesNotExist:
         return Response({'error': 'Conversation not found or no access'}, status=404)
+
+# Subcategory API Views
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_subcategories_by_category(request):
+    """Get subcategories for a specific category"""
+    from .models import Subcategory
+    from .serializers import SubcategorySerializer
+    
+    category_id = request.GET.get('category')
+    if not category_id:
+        return Response({'error': 'Category parameter is required'}, status=400)
+    
+    try:
+        subcategories = Subcategory.objects.filter(category_id=category_id)
+        serializer = SubcategorySerializer(subcategories, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_categories_with_subcategories(request):
+    """Get all categories with their subcategories"""
+    from .models import Category
+    from .serializers import CategorySerializer
+    
+    try:
+        categories = Category.objects.prefetch_related('subcategories').all()
+        serializer = CategorySerializer(categories, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)

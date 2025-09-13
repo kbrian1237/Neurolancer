@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from .models import (
-    UserProfile, ProfessionalDocument, Category, Gig, Order, OrderDeliverable, Project, Task, TaskProposal,
+    UserProfile, ProfessionalDocument, Category, Subcategory, Gig, Order, OrderDeliverable, Project, Task, TaskProposal,
     Review, Message, Portfolio, Withdrawal, HelpRequest, Conversation, Team, GroupJoinRequest,
     Job, Proposal, Notification, UserVerification, SavedSearch, OnboardingResponse,
     Course, Lesson, Enrollment, SkillAssessment, AssessmentQuestion, AssessmentAttempt, SkillBadge, CourseReview,
@@ -161,7 +161,13 @@ class UserLoginSerializer(serializers.Serializer):
         
         return attrs
 
+class SubcategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subcategory
+        fields = ['id', 'name', 'description', 'created_at']
+
 class CategorySerializer(serializers.ModelSerializer):
+    subcategories = SubcategorySerializer(many=True, read_only=True)
     gigs_count = serializers.SerializerMethodField()
     jobs_count = serializers.SerializerMethodField()
     courses_count = serializers.SerializerMethodField()
