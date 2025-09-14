@@ -192,6 +192,13 @@ class CategorySerializer(serializers.ModelSerializer):
         except Exception:
             return 0
 
+class CategoryWithSubcategoriesSerializer(serializers.ModelSerializer):
+    subcategories = SubcategorySerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'description', 'icon', 'subcategories', 'created_at']
+
 class GigSerializer(serializers.ModelSerializer):
     freelancer = UserSerializer(read_only=True)
     freelancer_profile = serializers.SerializerMethodField()
