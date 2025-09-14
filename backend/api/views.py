@@ -41,7 +41,7 @@ from .serializers import (
     NotificationPreferenceSerializer, NotificationTemplateSerializer, NotificationWithPreferencesSerializer,
     ErrorLogSerializer, UserAnalyticsSerializer, PlatformAnalyticsSerializer, AnalyticsEventSerializer,
     ThirdPartyIntegrationSerializer, IntegrationSyncSerializer, AdminUserSerializer,
-    AIConversationSerializer, AIMessageSerializer
+    AIConversationSerializer, AIMessageSerializer, EnhancedUserSerializer, ProfileCompletionSerializer
 )
 from rest_framework import serializers
 
@@ -175,6 +175,7 @@ def send_phone_verification(request):
         return Response({'error': 'Phone number required'}, status=status.HTTP_400_BAD_REQUEST)
     
     # Generate verification code
+    import random, string
     verification_code = ''.join(random.choices(string.digits, k=6))
     
     # Store code with expiration
