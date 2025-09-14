@@ -704,7 +704,8 @@ class OnboardingResponse(models.Model):
     availability = models.CharField(max_length=50, blank=True, null=True)
     rate_expectation = models.CharField(max_length=50, blank=True, null=True)
     
-
+    # Subcategories of interest
+    interested_subcategories = models.ManyToManyField(Subcategory, blank=True, related_name='interested_users')
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

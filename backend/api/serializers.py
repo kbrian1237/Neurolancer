@@ -1119,14 +1119,23 @@ class SavedSearchSerializer(serializers.ModelSerializer):
 
 class OnboardingResponseSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    interested_subcategories = SubcategorySerializer(many=True, read_only=True)
+    interested_subcategory_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False
+    )
     
     class Meta:
         model = OnboardingResponse
-        fields = ['id', 'user', 'is_completed', 'company_name', 'company_size', 'industry', 'project_types', 'budget_range', 'timeline_preference', 'goals', 'hear_about_us', 'specialization', 'experience_years', 'education_level', 'work_preference', 'availability', 'rate_expectation', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'is_completed', 'company_name', 'company_size', 'industry', 'project_types', 'budget_range', 'timeline_preference', 'goals', 'hear_about_us', 'specialization', 'experience_years', 'education_level', 'work_preference', 'availability', 'rate_expectation', 'interested_subcategories', 'interested_subcategory_ids', 'created_at', 'updated_at']
     
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['user'] = user
+        
+        # Extract subcategory IDs
+        subcategory_ids = validated_data.pop('interested_subcategory_ids', [])
         
         # Use get_or_create to handle existing records
         instance, created = OnboardingResponse.objects.get_or_create(
@@ -1139,6 +1148,10 @@ class OnboardingResponseSerializer(serializers.ModelSerializer):
             for key, value in validated_data.items():
                 setattr(instance, key, value)
             instance.save()
+        
+        # Set subcategories
+        if subcategory_ids:
+            instance.interested_subcategories.set(subcategory_ids)
         
         return instance
 
