@@ -18,6 +18,19 @@ class UserProfile(models.Model):
         ('prefer_not_to_say', 'Prefer not to say'),
     )
     
+    EXPERIENCE_LEVELS = (
+        ('entry', 'Entry Level'),
+        ('intermediate', 'Intermediate'),
+        ('expert', 'Expert'),
+    )
+    
+    AVAILABILITY_CHOICES = (
+        ('full-time', 'Full Time'),
+        ('part-time', 'Part Time'),
+        ('contract', 'Contract'),
+        ('freelance', 'Freelance'),
+    )
+    
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     user_type = models.CharField(max_length=10, choices=USER_TYPES, default='client')
     email_verified = models.BooleanField(default=False)
@@ -33,10 +46,37 @@ class UserProfile(models.Model):
     skills = models.TextField(blank=True, help_text="Comma-separated list of skills")
     hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     
+    # Enhanced Authentication Fields
+    # Phone Information
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    phone_verified = models.BooleanField(default=False)
+    phone_verification_code = models.CharField(max_length=10, blank=True, null=True)
+    phone_verification_expires = models.DateTimeField(blank=True, null=True)
+    
+    # Location Information
+    country_code = models.CharField(max_length=2, blank=True, null=True, help_text="ISO country code")
+    state = models.CharField(max_length=50, blank=True, null=True)
+    timezone = models.CharField(max_length=50, blank=True, null=True)
+    
+    # Professional Information
+    experience_level = models.CharField(max_length=20, choices=EXPERIENCE_LEVELS, default='entry')
+    availability = models.CharField(max_length=20, choices=AVAILABILITY_CHOICES, default='full-time')
+    
     # Personal Information
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
+    date_of_birth = models.DateField(blank=True, null=True)
     
-    # Contact Details
+    # Profile Status
+    profile_completed = models.BooleanField(default=False)
+    
+    # OAuth Information
+    google_id = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Metadata
+    last_login_ip = models.GenericIPAddressField(blank=True, null=True)
+    registration_ip = models.GenericIPAddressField(blank=True, null=True)
+    
+    # Contact Details (keeping existing fields for backward compatibility)
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
     city = models.CharField(max_length=100, blank=True)

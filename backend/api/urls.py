@@ -12,12 +12,16 @@ from .paystack_withdrawal import paystack_withdraw, get_paystack_banks, create_r
 from .test_paystack_withdrawal import test_paystack_withdraw
 
 urlpatterns = [
-    # Authentication URLs
+    # Enhanced Authentication URLs
     path('auth/register/', views.register, name='register'),
     path('auth/login/', views.login_view, name='login'),
     path('auth/logout/', views.logout_view, name='logout'),
     path('auth/google/', views.google_auth, name='google-auth'),
     path('auth/profile/', views.profile, name='profile'),
+    path('auth/complete-profile/', views.complete_profile, name='complete-profile'),
+    path('auth/send-phone-verification/', views.send_phone_verification, name='send-phone-verification'),
+    path('auth/verify-phone/', views.verify_phone_number, name='verify-phone'),
+    path('auth/get-profile/', views.get_user_profile, name='get-user-profile'),
     path('auth/verify-email/', views.verify_email, name='verify-email'),
     path('auth/resend-verification/', views.resend_verification_email, name='resend-verification'),
     path('auth/check-verification/', views.check_email_verification, name='check-verification'),

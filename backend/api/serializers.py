@@ -96,6 +96,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user_type = validated_data.pop('user_type')
         validated_data.pop('password_confirm')
         
+        # Get client IP for registration tracking
+        request = self.context.get('request')
+        registration_ip = None
+        if request:
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                registration_ip = x_forwarded_for.split(',')[0]
+            else:
+                registration_ip = request.META.get('REMOTE_ADDR')
+        
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
@@ -107,9 +117,73 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         UserProfile.objects.create(
             user=user, 
             user_type=user_type,
-            email_verified=False
+            email_verified=False,
+            registration_ip=registration_ip
         )
         return user
+
+class ProfileCompletionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = [
+            'phone_number', 'country_code', 'state', 'city', 'address', 'timezone',
+            'skills', 'experience_level', 'hourly_rate', 'availability',
+            'bio', 'date_of_birth', 'gender'
+        ]
+    
+    def validate_phone_number(self, value):
+        if value:
+            # Basic phone number validation
+            import re
+            phone_pattern = re.compile(r'^\+?1?\d{9,15}$')
+            if not phone_pattern.match(value.replace(' ', '').replace('-', '')):
+                raise serializers.ValidationError("Invalid phone number format")
+        return value
+    
+    def validate_country_code(self, value):
+        valid_countries = ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IN', 'NG', 'ZA', 'BR', 'KE']
+        if value and value not in valid_countries:
+            raise serializers.ValidationError("Invalid country code")
+        return value
+    
+    def update(self, instance, validated_data):
+        # Mark profile as completed when updating
+        validated_data['profile_completed'] = True
+        return super().update(instance, validated_data)
+
+class EnhancedUserSerializer(serializers.ModelSerializer):
+    profile = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'email', 'first_name', 'last_name', 'username',
+            'date_joined', 'last_login', 'profile'
+        ]
+        read_only_fields = ['id', 'date_joined', 'last_login']
+    
+    def get_profile(self, obj):
+        try:
+            profile = obj.userprofile
+            return {
+                'user_type': profile.user_type,
+                'phone_number': profile.phone_number,
+                'phone_verified': profile.phone_verified,
+                'country_code': profile.country_code,
+                'state': profile.state,
+                'city': profile.city,
+                'skills': profile.skills,
+                'experience_level': profile.experience_level,
+                'hourly_rate': float(profile.hourly_rate) if profile.hourly_rate else None,
+                'availability': profile.availability,
+                'bio': profile.bio,
+                'profile_completed': profile.profile_completed,
+                'email_verified': profile.email_verified,
+                'google_photo_url': profile.google_photo_url,
+                'avatar_url': profile.get_avatar_url(),
+            }
+        except UserProfile.DoesNotExist:
+            return None
 
 class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField()

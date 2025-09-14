@@ -116,11 +116,11 @@ The Neurolancer Team
         import traceback
         traceback.print_exc()
 
-# Authentication Views
+# Enhanced Authentication Views
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def register(request):
-    serializer = UserRegistrationSerializer(data=request.data)
+    serializer = UserRegistrationSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         user = serializer.save()
         
@@ -137,12 +137,97 @@ def register(request):
         
         token, created = Token.objects.get_or_create(user=user)
         return Response({
-            'user': UserSerializer(user).data,
+            'user': EnhancedUserSerializer(user).data,
             'token': token.key,
-            'profile': UserProfileSerializer(user.userprofile).data,
-            'message': 'Registration successful. Please check your email to verify your account.'
+            'requires_completion': not profile.profile_completed,
+            'message': 'Registration successful. Please complete your profile.'
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def complete_profile(request):
+    """Complete user profile with additional information"""
+    try:
+        profile = request.user.userprofile
+    except UserProfile.DoesNotExist:
+        profile = UserProfile.objects.create(user=request.user)
+    
+    serializer = ProfileCompletionSerializer(profile, data=request.data, partial=True)
+    
+    if serializer.is_valid():
+        serializer.save()
+        
+        return Response({
+            'message': 'Profile completed successfully',
+            'user': EnhancedUserSerializer(request.user).data
+        })
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def send_phone_verification(request):
+    """Send phone verification code"""
+    phone_number = request.data.get('phone_number')
+    
+    if not phone_number:
+        return Response({'error': 'Phone number required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Generate verification code
+    verification_code = ''.join(random.choices(string.digits, k=6))
+    
+    # Store code with expiration
+    try:
+        profile = request.user.userprofile
+    except UserProfile.DoesNotExist:
+        profile = UserProfile.objects.create(user=request.user)
+    
+    profile.phone_number = phone_number
+    profile.phone_verification_code = verification_code
+    profile.phone_verification_expires = timezone.now() + timezone.timedelta(minutes=10)
+    profile.save()
+    
+    # In production, integrate with SMS service (Twilio/AWS SNS)
+    # For now, return the code for testing
+    return Response({
+        'message': 'Verification code sent',
+        'code': verification_code  # Remove in production
+    })
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def verify_phone_number(request):
+    """Verify phone number with code"""
+    code = request.data.get('code')
+    
+    if not code:
+        return Response({'error': 'Verification code required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        profile = request.user.userprofile
+    except UserProfile.DoesNotExist:
+        return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check code validity
+    if (profile.phone_verification_code != code or 
+        not profile.phone_verification_expires or
+        profile.phone_verification_expires < timezone.now()):
+        return Response({'error': 'Invalid or expired code'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Mark phone as verified
+    profile.phone_verified = True
+    profile.phone_verification_code = None
+    profile.phone_verification_expires = None
+    profile.save()
+    
+    return Response({'message': 'Phone number verified successfully'})
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_user_profile(request):
+    """Get enhanced user profile"""
+    return Response(EnhancedUserSerializer(request.user).data)
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
@@ -199,7 +284,7 @@ def login_view(request):
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def google_auth(request):
-    """Handle Google OAuth authentication"""
+    """Enhanced Google OAuth authentication"""
     try:
         print(f"Google auth request received: {request.data}")
         
@@ -214,6 +299,13 @@ def google_auth(request):
         if not uid or not email:
             print("Google auth error: Missing UID or email")
             return Response({'error': 'UID and email are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get client IP for registration tracking
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            registration_ip = x_forwarded_for.split(',')[0]
+        else:
+            registration_ip = request.META.get('REMOTE_ADDR')
         
         # Check if user exists with this email
         try:
@@ -237,43 +329,29 @@ def google_auth(request):
             )
             is_new_user = True
         
-        # Get or create profile
+        # Get or create profile with enhanced fields
         profile, created = UserProfile.objects.get_or_create(
             user=user,
             defaults={
                 'user_type': 'client',
                 'bio': '',
-                'avatar_type': 'google' if photo_url else 'default',
+                'avatar_type': 'google' if photo_url else 'avatar',
                 'google_photo_url': photo_url or '',
                 'selected_avatar': 'user' if not photo_url else '',
-                'email_verified': True  # Google accounts are pre-verified
+                'email_verified': True,  # Google accounts are pre-verified
+                'google_id': uid,
+                'registration_ip': registration_ip
             }
         )
         
-        # Ensure profile has valid user_type (fix for superusers and existing accounts)
-        if not profile.user_type or profile.user_type not in ['client', 'freelancer', 'both']:
-            profile.user_type = 'client'  # Default to client for invalid/empty user_type
-            print(f"Fixed invalid user_type for user {user.username}: set to 'client'")
-        
-        # For new users, set default user_type to client (they can change it later)
-        if is_new_user and created:
-            profile.user_type = 'client'  # Default to client, user can change later
-            profile.email_verified = True  # Google accounts are pre-verified
-            if photo_url:
-                profile.google_photo_url = photo_url
-                profile.avatar_type = 'google'
-            else:
-                profile.avatar_type = 'avatar'
-                profile.selected_avatar = 'user'  # Default neutral avatar
-            profile.save()
-        else:
-            # For existing users, ensure they have email_verified set and update photo if needed
-            profile.email_verified = True  # Google accounts are pre-verified
+        # Update existing profile with Google data
+        if not created:
+            profile.email_verified = True
+            profile.google_id = uid
             if photo_url and not profile.google_photo_url:
                 profile.google_photo_url = photo_url
-                if profile.avatar_type == 'default':
+                if profile.avatar_type not in ['upload', 'google']:
                     profile.avatar_type = 'google'
-            # Always save to ensure user_type fix is persisted
             profile.save()
         
         # Create or get token
@@ -282,10 +360,10 @@ def google_auth(request):
         print(f"Google auth successful for user {user.username}")
         
         return Response({
-            'user': UserSerializer(user).data,
+            'user': EnhancedUserSerializer(user).data,
             'token': token.key,
-            'profile': UserProfileSerializer(profile).data,
-            'is_new_user': is_new_user
+            'is_new_user': is_new_user,
+            'requires_completion': not profile.profile_completed
         })
         
     except Exception as e:
