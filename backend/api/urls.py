@@ -33,6 +33,11 @@ urlpatterns = [
     path('categories/', views.CategoryListView.as_view(), name='category-list'),
     path('categories/<int:pk>/', views.CategoryUpdateView.as_view(), name='category-update'),
     
+    # Subcategory URLs
+    path('categories/with-subcategories/', views.get_categories_with_subcategories, name='categories-with-subcategories'),
+    path('categories/<int:category_id>/subcategories/', views.get_subcategories_by_category, name='subcategories-by-category'),
+    path('subcategories/', views.get_all_subcategories, name='all-subcategories'),
+    
     # Gig URLs
     path('gigs/', views.GigListView.as_view(), name='gig-list'),
     path('gigs/search/', views.search_gigs, name='gig-search'),
@@ -364,8 +369,6 @@ urlpatterns = [
     path('assessments/question-options/', assessment_views.create_question_option, name='create-question-option'),
     path('assessments/questions/<int:question_id>/', assessment_views.delete_question, name='delete-question'),
     
-    # Subcategory URLs
-    path('subcategories/', views.get_subcategories_by_category, name='subcategories-by-category'),
-    path('categories/with-subcategories/', views.get_categories_with_subcategories, name='categories-with-subcategories'),
+
 ]
 

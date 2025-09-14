@@ -18,7 +18,7 @@ from django.conf import settings
 import uuid
 import secrets
 from .models import (
-    UserProfile, ProfessionalDocument, Category, Gig, Order, OrderDeliverable, Project, Task, TaskProposal,
+    UserProfile, ProfessionalDocument, Category, Subcategory, Gig, Order, OrderDeliverable, Project, Task, TaskProposal,
     Review, Message, Portfolio, Withdrawal, HelpRequest, Conversation, Team, GroupJoinRequest,
     Job, Proposal, Notification, UserVerification, SavedSearch, OnboardingResponse,
     Course, Lesson, Enrollment, SkillAssessment, AssessmentQuestion, AssessmentAttempt, SkillBadge, CourseReview,
@@ -28,7 +28,7 @@ from .models import (
 )
 from .serializers import (
     UserSerializer, UserProfileSerializer, ProfessionalDocumentSerializer, UserRegistrationSerializer, 
-    UserLoginSerializer, CategorySerializer, GigSerializer, GigListSerializer,
+    UserLoginSerializer, CategorySerializer, SubcategorySerializer, CategoryWithSubcategoriesSerializer, GigSerializer, GigListSerializer,
     OrderSerializer, OrderDeliverableSerializer, ProjectSerializer, ProjectDetailSerializer, TaskSerializer, TaskProposalSerializer,
     ReviewSerializer, MessageSerializer, PortfolioSerializer, WithdrawalSerializer, HelpRequestSerializer, 
     ConversationSerializer, TeamSerializer, GroupJoinRequestSerializer, GroupCreateSerializer,
@@ -616,6 +616,34 @@ def test_password_set(request):
         
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=404)
+
+# Subcategory API Views
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_categories_with_subcategories(request):
+    """Get all categories with their subcategories"""
+    categories = Category.objects.prefetch_related('subcategories').all()
+    serializer = CategoryWithSubcategoriesSerializer(categories, many=True, context={'request': request})
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_subcategories_by_category(request, category_id):
+    """Get subcategories for a specific category"""
+    try:
+        subcategories = Subcategory.objects.filter(category_id=category_id)
+        serializer = SubcategorySerializer(subcategories, many=True, context={'request': request})
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_all_subcategories(request):
+    """Get all subcategories"""
+    subcategories = Subcategory.objects.select_related('category').all()
+    serializer = SubcategorySerializer(subcategories, many=True, context={'request': request})
+    return Response(serializer.data)
 
 # Category Views
 class CategoryListView(generics.ListCreateAPIView):
